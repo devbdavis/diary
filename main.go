@@ -229,7 +229,9 @@ func readTail(path string) ([]byte, error) {
 	defer f.Close()
 	const limit = 8 << 20
 	if fi, err := f.Stat(); err == nil && fi.Size() > limit {
-		f.Seek(fi.Size()-limit, io.SeekStart)
+		if _, err := f.Seek(fi.Size()-limit, io.SeekStart); err != nil {
+			return nil, err
+		}
 	}
 	return io.ReadAll(f)
 }
@@ -501,7 +503,7 @@ func sectionTerminalLogs(sinceTime time.Time, max int, dirs []string) (string, b
 	}
 	var b strings.Builder
 	for _, dir := range dirs {
-		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return nil
 			}
