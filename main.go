@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -680,6 +681,35 @@ func sectionGH(ctx context.Context, sinceTime time.Time, max int) (string, bool)
 	return strings.Join(capLines(strings.Split(out, "\n"), max), "\n") + "\n", true
 }
 
+// sectionForgejo lists PRs updated in the window across every repo tea's default login can see.
+func sectionForgejo(ctx context.Context, sinceTime time.Time, max int) (string, bool) {
+	if !onPath("tea") {
+		return "", false
+	}
+	out, err := runCmd(ctx, "tea", "api", "/repos/issues/search?type=pulls&state=all&limit=50&since="+
+		url.QueryEscape(sinceTime.Format(time.RFC3339)))
+	if err != nil {
+		return errLine(out, err), true
+	}
+	var prs []struct {
+		Number     int    `json:"number"`
+		Title      string `json:"title"`
+		State      string `json:"state"`
+		HTMLURL    string `json:"html_url"`
+		Repository struct {
+			FullName string `json:"full_name"`
+		} `json:"repository"`
+	}
+	if err := json.Unmarshal([]byte(out), &prs); err != nil {
+		return errLine(out, err), true
+	}
+	var lines []string
+	for _, p := range prs {
+		lines = append(lines, fmt.Sprintf("%s#%d [%s] %s %s", p.Repository.FullName, p.Number, p.State, p.Title, p.HTMLURL))
+	}
+	return strings.Join(capLines(lines, max), "\n") + "\n", true
+}
+
 type slackResp struct {
 	OK       bool   `json:"ok"`
 	Error    string `json:"error"`
@@ -840,6 +870,8 @@ func main() {
 	add("Git commits", body, ok)
 	body, ok = sectionGH(ctx, sinceTime, *max)
 	add("GitHub PRs", body, ok)
+	body, ok = sectionForgejo(ctx, sinceTime, *max)
+	add("Forgejo PRs", body, ok)
 	body, ok = sectionSlack(client, sinceTime, *max)
 	add("Slack", body, ok)
 	body, ok = sectionLinear(client, sinceTime, *max)
