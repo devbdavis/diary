@@ -1,0 +1,9 @@
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      # Closing read-only files and HTTP bodies can't lose data.
+      exclude-functions:
+        - (*os.File).Close
+        - (io.ReadCloser).Close
