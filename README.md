@@ -1,12 +1,13 @@
 # diary
 
-Collects what you did recently — shell, terminal logs, Claude Code prompts, git, PRs, Slack, Linear — into one redacted markdown digest. A scheduled Workshop agent ([prompts/daily.md](prompts/daily.md)) turns that digest into journal entries, learnings and SOPs in the `diary` vault.
+Collects what you did recently — shell, terminal logs, Claude Code prompts, git, PRs, Slack, Linear — into one redacted markdown digest. The Workshop **Diary** schedule template (`templates/schedules/diary.json` in Workshop) runs it daily and turns that digest into journal entries, learnings and SOPs in the `diary` vault.
 
 Split on purpose: the Go binary is a dumb, deterministic collector (stdlib only, never writes files); the judgement — what's a gotcha, what deserves an SOP — lives in the prompt.
 
 ```sh
-nix-shell                          # or: direnv allow (pinned Go, golangci-lint, tea)
+nix-shell                          # or: direnv allow (pinned Go, golangci-lint, shellcheck)
 make install                       # -> ~/go/bin/diary
+# or, without a checkout: GOPRIVATE=git.chu.zone go install git.chu.zone/nozzle-industries/diary@latest
 diary -since 24h -repos /repos     # markdown on stdout
 ```
 

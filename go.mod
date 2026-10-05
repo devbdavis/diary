@@ -1,3 +1,3 @@
-module github.com/devbdavis/diary
+module git.chu.zone/nozzle-industries/diary
 
 go 1.23
