@@ -6,5 +6,5 @@
   }) {} }:
 
 pkgs.mkShell {
-  buildInputs = with pkgs; [ go gopls gotools golangci-lint gnumake git gh ];
+  buildInputs = with pkgs; [ go gopls gotools golangci-lint gnumake git curl jq shellcheck ];
 }

@@ -1,7 +1,7 @@
 name: Release
 
 # Cut a release on every merge to main: auto-bump patch from the latest v* tag,
-# cross-compile linux/darwin × amd64/arm64, publish a GitHub release (which creates the tag).
+# cross-compile linux/darwin × amd64/arm64, publish a Forgejo release (which creates the tag).
 # Commit SUBJECT markers: [release minor], [release major], [skip release].
 on:
   push:
@@ -17,13 +17,10 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 jobs:
   release:
     name: Build & Publish
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -66,13 +63,8 @@ jobs:
         run: nix-shell --run "make dist"
 
       # Runs last so a failed build never mints a tag.
-      - name: Create GitHub release
+      - name: Create Forgejo release
         if: steps.meta.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.meta.outputs.version }}
-          PREV: ${{ steps.meta.outputs.prev }}
-        run: |
-          RANGE="${PREV:+$PREV..}HEAD"
-          git log --format='- %s' "$RANGE" > notes.md
-          gh release create "$VERSION" dist/* --target "$GITHUB_SHA" --title "$VERSION" --notes-file notes.md
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: nix-shell --run "scripts/forgejo-release.sh ${{ steps.meta.outputs.version }} ${{ steps.meta.outputs.prev }}"
