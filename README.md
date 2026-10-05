@@ -16,7 +16,7 @@ diary -since 24h -repos /repos     # markdown on stdout
 | `-since` | `24h` | window |
 | `-max` | `300` | per-section line cap (keeps newest) |
 | `-repos` | `$DIARY_REPOS` or `$HOME` | roots scanned (depth 4) for git repos |
-| `-logs` | `$DIARY_TERM_LOGS` | dirs of terminal session logs |
+| `-logs` | `$DIARY_TERM_LOGS` or `~/.itermlogs` | dirs of terminal session logs |
 
 ## Development
 
@@ -33,7 +33,7 @@ Each is skipped when absent and listed under **Coverage** so the agent knows wha
 |---|---|
 | Environment | always: OS (macOS `sw_vers` / Linux os-release), kernel, container detection, tool versions, `docker ps` |
 | Shell history | zsh (`setopt EXTENDED_HISTORY` for timestamps), bash (`HISTTIMEFORMAT` set for timestamps), fish, atuin (exit codes + cwd) |
-| Terminal logs | iTerm2: Settings → Profiles → Session → *Automatically log session input to files* → point `DIARY_TERM_LOGS` at that dir. tmux: `pipe-pane`. Anything else: `script`. |
+| Terminal logs | iTerm2: Settings → Profiles → Session → *Automatically log session input to files* → set the folder to `~/.itermlogs` (or point `DIARY_TERM_LOGS` elsewhere). tmux: `pipe-pane`. Anything else: `script`. |
 | Claude Code | `~/.claude/history.jsonl` |
 | Git | your commits (`git config user.email`) + uncommitted counts |
 | GitHub PRs | `gh` authenticated |
