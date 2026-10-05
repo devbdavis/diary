@@ -440,6 +440,9 @@ func sectionShellHistory(ctx context.Context, sinceTime time.Time, max int) (str
 		entries := collapseDup(f.parser(bytes.NewReader(data)))
 		var untimed []entry
 		for _, e := range entries {
+			if strings.Contains(e.s, "/.workshop/sessions/") && strings.HasSuffix(e.s, "/launch.sh") {
+				continue // Workshop session launchers, not user commands
+			}
 			if e.t.IsZero() {
 				untimed = append(untimed, e)
 				continue
@@ -694,9 +697,12 @@ func sectionForgejo(ctx context.Context, sinceTime time.Time, max int) (string, 
 		return errLine(out, err), true
 	}
 	var prs []struct {
-		Number     int    `json:"number"`
-		Title      string `json:"title"`
-		State      string `json:"state"`
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		State  string `json:"state"`
+		PR     struct {
+			Merged bool `json:"merged"`
+		} `json:"pull_request"`
 		HTMLURL    string `json:"html_url"`
 		Repository struct {
 			FullName string `json:"full_name"`
@@ -707,6 +713,9 @@ func sectionForgejo(ctx context.Context, sinceTime time.Time, max int) (string, 
 	}
 	var lines []string
 	for _, p := range prs {
+		if p.PR.Merged {
+			p.State = "merged"
+		}
 		lines = append(lines, fmt.Sprintf("%s#%d [%s] %s %s", p.Repository.FullName, p.Number, p.State, p.Title, p.HTMLURL))
 	}
 	return strings.Join(capLines(lines, max), "\n") + "\n", true
