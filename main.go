@@ -845,6 +845,9 @@ func main() {
 		defaultRepos = os.Getenv("HOME")
 	}
 	defaultLogs := os.Getenv("DIARY_TERM_LOGS")
+	if defaultLogs == "" {
+		defaultLogs = filepath.Join(os.Getenv("HOME"), ".itermlogs")
+	}
 
 	since := flag.Duration("since", 24*time.Hour, "how far back to look")
 	max := flag.Int("max", 300, "per-section line cap (keeps newest)")
