@@ -5,7 +5,8 @@ Collects what you did recently — shell, terminal logs, Claude Code prompts, gi
 Split on purpose: the Go binary is a dumb, deterministic collector (stdlib only, never writes files); the judgement — what's a gotcha, what deserves an SOP — lives in the prompt.
 
 ```sh
-go install .                       # -> ~/go/bin/diary
+nix-shell                          # or: direnv allow (pinned Go, golangci-lint, gh)
+make install                       # -> ~/go/bin/diary
 diary -since 24h -repos /repos     # markdown on stdout
 ```
 
@@ -15,6 +16,13 @@ diary -since 24h -repos /repos     # markdown on stdout
 | `-max` | `300` | per-section line cap (keeps newest) |
 | `-repos` | `$DIARY_REPOS` or `$HOME` | roots scanned (depth 4) for git repos |
 | `-logs` | `$DIARY_TERM_LOGS` | dirs of terminal session logs |
+
+## Development
+
+`make ci` runs what CI runs (vet, lint, race tests, build). `make dist` cross-compiles linux/darwin × amd64/arm64 into `dist/` with `SHA256SUMS`.
+
+- **CI** (`.github/workflows/ci.yml`): every PR to main, all steps via `nix-shell`.
+- **Release** (`.github/workflows/release.yml`): every merge to main auto-bumps the patch version from the latest `v*` tag and publishes a GitHub release with the four binaries. Put `[release minor]`, `[release major]` or `[skip release]` in the commit subject to change that. Grab the darwin binary from Releases to run it on the Mac.
 
 ## Sources
 
