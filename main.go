@@ -27,15 +27,16 @@ import (
 // ---------- redaction ----------
 
 var (
-	rePrivateKey = regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|\z)`)
+	rePrivateKey = regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY[A-Z ]*-----.*?(?:-----END [A-Z ]*PRIVATE KEY[A-Z ]*-----|\z)`)
 	reAWS        = regexp.MustCompile(`AKIA[0-9A-Z]{16}`)
 	reGH         = regexp.MustCompile(`gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w+`)
 	reSlackTok   = regexp.MustCompile(`xox[abprs]-[\w-]+`)
+	reSlackHook  = regexp.MustCompile(`hooks\.slack\.com/(?:services|workflows|triggers)/\S+`)
 	reSK         = regexp.MustCompile(`\bsk[_-][\w-]{20,}`)
 	reLinear     = regexp.MustCompile(`lin_api_\w+`)
-	reURLCreds   = regexp.MustCompile(`://[^/\s:@]+:[^/\s@]+@`)
+	reURLCreds   = regexp.MustCompile(`://[^/\s:@]+:[^/\s]+@`)
 	reUserPass   = regexp.MustCompile(`(--user|\s-u)(=|\s+)[^\s:]+:\S+`)
-	reBearer     = regexp.MustCompile(`(?i)\bBearer\s+\S+`)
+	reBearer     = regexp.MustCompile(`(?i)\b(Bearer|Basic)\s+[\w.~+/=-]{8,}`)
 	rePassToken  = regexp.MustCompile(`(?i)(--password|--token)(=|\s+)\S+`)
 	reKey        = regexp.MustCompile(`(?i)\b(\w*(?:token|secret|password|passwd|pwd|key|auth|credential)\w*)(['"]?[ \t]*[:=][ \t]*['"]?)([^\s'"]+)`)
 
@@ -48,10 +49,11 @@ func redact(s string) string {
 	s = reAWS.ReplaceAllString(s, "[REDACTED]")
 	s = reGH.ReplaceAllString(s, "[REDACTED]")
 	s = reSlackTok.ReplaceAllString(s, "[REDACTED]")
+	s = reSlackHook.ReplaceAllString(s, "hooks.slack.com/[REDACTED]")
 	s = reSK.ReplaceAllString(s, "[REDACTED]")
 	s = reLinear.ReplaceAllString(s, "[REDACTED]")
 	s = reURLCreds.ReplaceAllString(s, "://[REDACTED]@")
-	s = reBearer.ReplaceAllString(s, "Bearer [REDACTED]")
+	s = reBearer.ReplaceAllString(s, "$1 [REDACTED]")
 	s = reUserPass.ReplaceAllString(s, "$1$2[REDACTED]")
 	s = rePassToken.ReplaceAllString(s, "$1$2[REDACTED]")
 	s = reKey.ReplaceAllString(s, "$1$2[REDACTED]")
@@ -608,9 +610,6 @@ func findRepos(root string, maxDepth int) []string {
 }
 
 func sectionGit(ctx context.Context, sinceTime time.Time, max int, roots []string) (string, bool) {
-	emailOut, _ := runCmd(ctx, "git", "config", "--global", "user.email")
-	email := strings.TrimSpace(emailOut)
-
 	var repos []string
 	for _, root := range roots {
 		repos = append(repos, findRepos(root, 4)...)
@@ -634,6 +633,9 @@ func sectionGit(ctx context.Context, sinceTime time.Time, max int, roots []strin
 
 		logArgs := []string{"-C", r, "log", "--all", "--since=" + sinceTime.Format(time.RFC3339),
 			"--date=format-local:%m-%d %H:%M", "--format=%h %ad %s"}
+		// Per repo, so a repo-local user.email override is honoured.
+		emailOut, _ := runCmd(ctx, "git", "-C", r, "config", "user.email")
+		email := strings.TrimSpace(emailOut)
 		if email != "" {
 			logArgs = append(logArgs, "--author="+email)
 		}

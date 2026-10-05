@@ -33,6 +33,11 @@ func TestRedact(t *testing.T) {
 		{"stripe sk", "paste sk_live_abcdefghijklmnopqrstuv", "paste [REDACTED]"},
 		{"curl basic auth", "curl -u admin:s3cret https://x", "curl -u [REDACTED] https://x"},
 		{"push -u untouched", "git push -u origin main", "git push -u origin main"},
+		{"pgp key", "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQOYBF\n-----END PGP PRIVATE KEY BLOCK-----", "[REDACTED]"},
+		{"basic auth", "-H 'Authorization: Basic dXNlcjpwYXNzd29yZA=='", "-H 'Authorization: [REDACTED] [REDACTED]'"},
+		{"basic prose", "Basic setup done", "Basic setup done"},
+		{"at in password", "postgres://user:p@ssw0rd@host/db", "postgres://[REDACTED]@host/db"},
+		{"slack webhook", "curl https://hooks.slack.com/services/T0/B0/abc123", "curl https://hooks.slack.com/[REDACTED]"},
 		{"innocent", "git status --short", "git status --short"},
 	}
 	for _, c := range cases {
