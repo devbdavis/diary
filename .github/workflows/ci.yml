@@ -1,0 +1,29 @@
+name: CI
+
+# PR-only: everything lands via PR; release.yml rebuilds on every merge to main.
+on:
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-checks:
+    name: PR Checks
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v3
+      - name: Verify Go dependencies
+        run: nix-shell --run "go mod verify"
+      - name: Vet
+        run: nix-shell --run "make vet"
+      - name: Lint
+        run: nix-shell --run "make lint"
+      - name: Test
+        run: nix-shell --run "make test"
+      - name: Build all platforms
+        run: nix-shell --run "make dist"
