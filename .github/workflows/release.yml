@@ -1,0 +1,78 @@
+name: Release
+
+# Cut a release on every merge to main: auto-bump patch from the latest v* tag,
+# cross-compile linux/darwin × amd64/arm64, publish a GitHub release (which creates the tag).
+# Commit SUBJECT markers: [release minor], [release major], [skip release].
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'prompts/**'
+      - '.github/**'
+  workflow_dispatch:
+
+# Serialize releases: two quick merges must not compute the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: DeterminateSystems/nix-installer-action@v3
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          SUBJECT="$(git show -s --format=%s "$GITHUB_SHA")"
+          case "$SUBJECT" in
+            *"[skip release]"*) echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          PREV="$(git tag --list 'v*' --sort=-version:refname | head -1 || true)"
+          if [ -z "$PREV" ]; then
+            VERSION="v0.1.0"
+          else
+            IFS=. read -r MAJ MIN PAT <<<"${PREV#v}"
+            PAT="${PAT%%-*}"
+            case "$SUBJECT" in
+              *"[release major]"*) MAJ=$((MAJ + 1)); MIN=0; PAT=0 ;;
+              *"[release minor]"*) MIN=$((MIN + 1)); PAT=0 ;;
+              *) PAT=$((PAT + 1)) ;;
+            esac
+            VERSION="v${MAJ}.${MIN}.${PAT}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION prev=${PREV:-<none>}"
+
+      - name: Test
+        if: steps.meta.outputs.skip != 'true'
+        run: nix-shell --run "make test"
+
+      - name: Build all platforms
+        if: steps.meta.outputs.skip != 'true'
+        run: nix-shell --run "make dist"
+
+      # Runs last so a failed build never mints a tag.
+      - name: Create GitHub release
+        if: steps.meta.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          PREV: ${{ steps.meta.outputs.prev }}
+        run: |
+          RANGE="${PREV:+$PREV..}HEAD"
+          git log --format='- %s' "$RANGE" > notes.md
+          gh release create "$VERSION" dist/* --target "$GITHUB_SHA" --title "$VERSION" --notes-file notes.md
